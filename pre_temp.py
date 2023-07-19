@@ -29,7 +29,7 @@ def rmrow(path):
 
 def clear_csv(path):
     df = pd.read_csv(path, header = None)
-    new_columns = ['EDA', "Time"]
+    new_columns = ['TEMP', "Time"]
     df.columns = new_columns
     df['Time'] = pd.to_datetime(df['Time'], format = '%Y-%m%d-%H%M-%S-%f')
     df.to_csv(path, index = False)
