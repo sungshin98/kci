@@ -9,7 +9,7 @@ def getfile(path):
         file_list.append(name)
     return file_list
 
-def rmrow(path, row):
+def rmrow(path):
     abs_path = os.path.abspath(path)
     temp_file = abs_path + ".tmp"
 
@@ -27,6 +27,13 @@ def rmrow(path, row):
     os.remove(path)
     os.rename(temp_file, path)
 
+def clear_csv(path):
+    df = pd.read_csv(path, header = None)
+    new_columns = ['EDA', "Time"]
+    df.columns = new_columns
+    df['Time'] = pd.to_datetime(df['Time'], format = '%Y-%m%d-%H%M-%S-%f')
+    df.to_csv(path, index = False)
+
 fir_path = "./EDA"
 in_path = getfile(fir_path)
 for i in range(len(in_path)):
@@ -34,5 +41,5 @@ for i in range(len(in_path)):
     in2_path = getfile(path)
     for j in range(len(in2_path)):
         last_path = path + '/' + in2_path[j]
-        rmrow(last_path, 2)
-
+        rmrow(last_path)
+        clear_csv(last_path)

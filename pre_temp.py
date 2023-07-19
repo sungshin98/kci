@@ -1,16 +1,38 @@
-import pandas as pd
 import csv
 import os
+import pandas as pd
+import time
 
+def getfile(path):
+    file_list = []
+    for name in os.listdir(path):
+        file_list.append(name)
+    return file_list
 
-def csv_temp_time(csv_file, out_file):
-    '''
-    temp csv파일에서 1,2 열 추출 및 1,2행 삭제
-    1열 2열 이름 각각 Temp, Time으로 설정
-    '''
-    data = pd.read_csv(csv_file, skiprows=[0, 1], usecols=[0, 1], names=['Temp', 'Time'])
-    data.to_csv(out_file, index=False)
-    
+def rmrow(path):
+    abs_path = os.path.abspath(path)
+    temp_file = abs_path + ".tmp"
+
+    with open(path, 'r') as infile, open(temp_file, 'w', newline='') as outfile:
+        reader = csv.reader(infile)
+        writer = csv.writer(outfile)
+
+        next(reader)
+        next(reader)
+
+        for num in reader:
+            writer.writerow([num[0], num[1]])
+
+    time.sleep(1)
+    os.remove(path)
+    os.rename(temp_file, path)
+
+def clear_csv(path):
+    df = pd.read_csv(path, header = None)
+    new_columns = ['EDA', "Time"]
+    df.columns = new_columns
+    df['Time'] = pd.to_datetime(df['Time'], format = '%Y-%m%d-%H%M-%S-%f')
+    df.to_csv(path, index = False)
 
 def csv_time_wave(csv_file, out_file):
     '''
@@ -32,32 +54,18 @@ def csv_time_wave(csv_file, out_file):
         writer = csv.writer(file)
         writer.writerow(['Time', 'Wave'])  # 헤더 쓰기
         writer.writerows(new_data)
-        
-
-def pre_temp(root_folder, output_folder, pre_func):
-    for root, _, files in os.walk(root_folder):
-        for file in files:
-            if file.endswith('.csv'):
-                csv_file = os.path.join(root, file)
-
-                folder_name = os.path.basename(root)
-                out_folder = os.path.join(output_folder, folder_name)
-                if not os.path.exists(out_folder):
-                    os.makedirs(out_folder)
-
-                # 변환된 파일 경로 생성
-                out_file = os.path.join(out_folder, file)
-
-                pre_func(csv_file, out_file)
 
                 
-# csv파일 상위 폴더 위치
-root_folder = 'D:/laboratory things/paper/multimodalemotion/KEMDy20_v1_1/TEMP'
-# 변환된 csv파일을 저장할 상위 폴더 위치 pre_temp_wave가 저장될 폴더명
-output_time_wave = 'D:/laboratory things/paper/multimodalemotion/KEMDy20_v1_1/pre_time_wave'
-output_temp_time = 'D:/laboratory things/paper/multimodalemotion/KEMDy20_v1_1/pre_temp'
-
-# csv파일에서 time과 wave파일명만 있는 csv파일 생성
-pre_temp(root_folder, output_time_wave, csv_time_wave)
-# csv파일에서 Temp와 Time만 있는 csv파일 생성
-pre_temp(root_folder, output_temp_time, csv_temp_time)
+fir_path = "./TEMP"
+in_path = getfile(fir_path)
+for i in range(len(in_path)):
+    path = "./TEMP/" + in_path[i]
+    in2_path = getfile(path)
+    talk_path = './TALK/' + in_path[i]
+    os.mkdir(talk_path)
+    for j in range(len(in2_path)):
+        last_path = path + '/' + in2_path[j]
+        last2_path = talk_path + '/' + in2_path[j]
+        csv_time_wave(last_path, last2_path)
+        rmrow(last_path)
+        clear_csv(last_path)
