@@ -11,10 +11,10 @@ def extract_time(path):
     global save_csv
     df = pd.read_csv(path)
     for wave, time in df.groupby('Wave'):
-        start = df['Time'].iloc[0]
-        end = df['Time'].iloc[-1]
+        start = time.iloc[0]['Time']
+        end = time.iloc[-1]['Time']
         name = wave
-
+        print(start)
         data_to_append = {
             'Start': [start],
             'End': [end],
