@@ -26,7 +26,7 @@ def read_filename(folder, file):
 
 def resample_df(df):
     df.set_index('Time', inplace = True)
-    df = df.resample('0.25S').interpolate()
+    df = df.resample('0.25S').interpolate(method='linear')
     df.reset_index(inplace=True)
     return df
 
@@ -52,7 +52,7 @@ for i in range(len(folder_list)):
         if folder_list[i][-2:] != file_list[j][4:6]:
             continue
         df_eda, df_ibi, df_temp = read_filename(folder_list[i], file_list[j])
-        df_temp = resample_df(df_temp)
+        df_ibi = resample_df(df_ibi)
         df = pd.merge(df_eda, df_ibi, on='Time', how='outer')
         df = pd.merge(df, df_temp, on='Time', how='outer')
         df.to_csv('./BIO/' + folder_list[i] + '/' + file_list[j])
