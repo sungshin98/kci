@@ -7,6 +7,7 @@ import os
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
+
 class LSTMCell(nn.Module):
     def __init__(self, input_size, hidden_size, bias=True):
         super(LSTMCell, self).__init__()
@@ -40,6 +41,7 @@ class LSTMCell(nn.Module):
 
         return(hy, cy)
 
+
 class LSTMModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, bias=True):
         super(LSTMModel, self).__init__()
@@ -66,15 +68,11 @@ class LSTMModel(nn.Module):
         out = self.fc(out)
         return out
 
-def call_df(path):
 
+def call_df(path):
     df = pd.read_csv(path)
     df = df.sort_values(by='Time')
-    """
-    x = train
-    y = validation
-    z = test
-    """
+
     test = df[df['IBI'].isnull()]
     test_input = test[['EDA', 'TEMP']].values
 
@@ -107,8 +105,8 @@ batch_train = len(train_input)
 batch_val = len(val_input)
 batch_test = len(test_input)
 
-train_input = train_input.reshape(batch_train , seq, input_dim)
-val_input = val_input.reshape(batch_val , seq, input_dim)
+train_input = train_input.reshape(batch_train, seq, input_dim)
+val_input = val_input.reshape(batch_val, seq, input_dim)
 test_input = test_input.reshape(batch_test, seq, input_dim)
 
 model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
@@ -144,6 +142,7 @@ for epoch in range(num_epochs):
             # Print the progress for validation
             if (epoch + 1) % 10 == 0:
                 print(f"Epoch [{epoch + 1}/{num_epochs}], Validation Loss: {val_loss.item():.4f}")
+
 pred = model(test_input)
 plt.plot(pred)
 plt.show()
