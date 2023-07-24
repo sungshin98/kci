@@ -2,9 +2,6 @@ import math
 import torch
 import torch.nn as nn
 import pandas as pd
-import csv
-import os
-from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
 
@@ -50,18 +47,18 @@ class LSTMModel(nn.Module):
         self.lstm = nn.ModuleList([LSTMCell(input_dim, hidden_dim, bias) for _ in range(layer_dim)])
         self.fc = nn.Linear(hidden_dim, output_dim)
 
-    def forward(self, x):
-        h0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
-        c0 = torch.zeros(self.layer_dim, x.size(0), self.hidden_dim)
+    def forward(self, xxxxx):
+        h_0 = torch.zeros(self.layer_dim, xxxxx.size(0), self.hidden_dim)
+        c_0 = torch.zeros(self.layer_dim, xxxxx.size(0), self.hidden_dim)
 
         outs = []
-        cn = c0[0,:,:]
-        hn = h0[0,:,:]
+        cn = h_0[0, :, :]
+        hn = c_0[0, :, :]
 
-        for seq_model in range(x.size(1)):
-            hn, cn = self.lstm[0](x[:, seq_model, :], (h0[0], c0[0]))  # 첫 번째 LSTMCell 사용, hn과 cn 초기화
+        for seq_model in range(xxxxx.size(1)):
+            hn, cn = self.lstm[0](xxxxx[:, seq_model, :], (h_0[0], c_0[0]))  # 첫 번째 LSTMCell 사용, hn과 cn 초기화
             for layer in range(1, self.layer_dim):  # 두 번째 이후 LSTMCell 사용
-                hn, cn = self.lstm[layer](hn, (h0[layer], cn))  # 이전 층의 hn과 현재 층의 cn을 사용
+                hn, cn = self.lstm[layer](hn, (h_0[layer], cn))  # 이전 층의 hn과 현재 층의 cn을 사용
             outs.append(hn)
 
         out = outs[-1].squeeze()
@@ -83,7 +80,6 @@ def call_df(path):
     train_input = train[['EDA', 'TEMP']].values
     train_output = train['IBI'].values
 
-
     val = df.iloc[train_size:]
     val_input = val[['EDA', 'TEMP']].values
     val_output = val['IBI'].values
@@ -92,22 +88,22 @@ def call_df(path):
 
 input_dim = 2
 hidden_dim = 32
-layer_dim = 3
+layer_dim = 1
 output_dim = 1
 learning_rate = 0.001
 num_epochs = 100
 
 path = './norm/Session01/Sess01_script01_User001F.csv'
 train_input, train_output, val_input, val_output, test_input = call_df(path)
-seq = 1
+batch_size = 1
 
-batch_train = len(train_input)
-batch_val = len(val_input)
-batch_test = len(test_input)
+seq_train = len(train_input)
+seq_val = len(val_input)
+seq_test = len(test_input)
 
-train_input = train_input.reshape(batch_train, seq, input_dim)
-val_input = val_input.reshape(batch_val, seq, input_dim)
-test_input = test_input.reshape(batch_test, seq, input_dim)
+train_input = train_input.reshape(batch_size, seq_train, input_dim)
+val_input = val_input.reshape(batch_size, seq_val, input_dim)
+test_input = test_input.reshape(batch_size, seq_test, input_dim)
 
 model = LSTMModel(input_dim, hidden_dim, layer_dim, output_dim)
 criterion = nn.MSELoss()
@@ -117,31 +113,31 @@ if torch.cuda.is_available():
     model.cuda()
 
 for epoch in range(num_epochs):
-        model.train()
-        outputs = model(train_input)
+    model.train()
+    outputs = model(train_input)
 
-        # Compute the loss
-        loss = criterion(outputs, train_output)
+    # Compute the loss
+    loss = criterion(outputs, train_output)
 
-        # Zero gradients, backward pass, and update weights
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    # Zero gradients, backward pass, and update weights
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
-        # Print the progress
+    # Print the progress
+    if (epoch + 1) % 10 == 0:
+        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}")
+        # Validation
+    model.eval()
+    with torch.no_grad():
+        val_outputs = model(val_input)
+
+        # Compute the loss for validation data
+        val_loss = criterion(val_outputs, val_output)
+
+        # Print the progress for validation
         if (epoch + 1) % 10 == 0:
-            print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}")
-            # Validation
-        model.eval()
-        with torch.no_grad():
-            val_outputs = model(val_input)
-
-            # Compute the loss for validation data
-            val_loss = criterion(val_outputs, val_output)
-
-            # Print the progress for validation
-            if (epoch + 1) % 10 == 0:
-                print(f"Epoch [{epoch + 1}/{num_epochs}], Validation Loss: {val_loss.item():.4f}")
+            print(f"Epoch [{epoch + 1}/{num_epochs}], Validation Loss: {val_loss.item():.4f}")
 
 pred = model(test_input)
 plt.plot(pred)
