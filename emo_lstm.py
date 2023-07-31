@@ -71,23 +71,21 @@ def call_df(path):
         5: 'disgust',
         6: 'fear'
     }
-    df['Emo'] = df['Emo'].map(emotion_mapping)
     df_train = df.drop(['Name', 'Emo'], axis=1)  # Drop the 'Name' and 'Emo' columns
-    df_label = df['Emo'].map(lambda x: emotion_mapping.get(x)).tolist()  # Convert to list of emotion labels
+    data = {
+        'Emo': ['neutral', 'happy', 'sad', 'angry', 'surprise', 'disgust', 'fear']
+    }
+    df = pd.DataFrame(data)
 
-    # Initialize an empty one-hot tensor with all zeros
-    num_classes = len(emotion_mapping)
-    df_label_one_hot = torch.zeros(len(df_label), num_classes, dtype=torch.float)
+    # Emo 칼럼을 기반으로 7개의 칼럼 생성 (one-hot encoding)
+    df_encoded = pd.get_dummies(df, columns=['Emo'])
 
-    # Set the appropriate index to 1 based on the emotion label mapping
-    for i, label in enumerate(df_label):
-        if label in emotion_mapping.values():
-            idx = list(emotion_mapping.values()).index(label)
-            df_label_one_hot[i, idx] = 1.0
+    # Emo 칼럼 제거 (이미 one-hot encoding으로 대체되었으므로 필요 없음)
+    df_encoded = df_encoded.drop('Emo', axis=1)
 
     df_train = torch.tensor(df_train.values, dtype=torch.float)  # Convert DataFrame to numpy array first
 
-    return df_label_one_hot, df_train
+    return df_encoded, df_train
 
 
 def train_model(path, class_weights, saved_model_path=None):
