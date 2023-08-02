@@ -5,6 +5,8 @@ import os
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.callbacks import EarlyStopping
+import random
+from tensorflow.keras.optimizers import RMSprop
 
 def getfile(path):
     file_list = []
@@ -59,22 +61,19 @@ def train_model(path, class_weights, saved_model_path=None):
     batch_size = 1
     model_save_path = os.path.join(saved_model_path, 'my_model')
     dnn_layer_units = 128
-    #, kernel_regularizer = tf.keras.regularizers.l2(0.01)
+    optimizer = RMSprop(learning_rate=learning_rate)
     if not os.path.exists(model_save_path):
         model = tf.keras.Sequential([
-            tf.keras.layers.LSTM(hidden_dim, return_sequences=True, input_shape=(None, input_dim), kernel_regularizer = tf.keras.regularizers.l2(0.01)),
+            tf.keras.layers.LSTM(hidden_dim, return_sequences=True, input_shape=(None, input_dim),
+                                 kernel_regularizer = tf.keras.regularizers.l2(0.01)),
+            tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Dropout(0.2),
             tf.keras.layers.LSTM(hidden_dim, kernel_regularizer = tf.keras.regularizers.l2(0.01)),
-            tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.Dense(dnn_layer_units, activation='relu'),
+            tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Dropout(0.2),
             tf.keras.layers.Dense(output_dim, activation='softmax')
         ])
-        """dnn_layer_units = 128
-        model.add(tf.keras.layers.Dense(dnn_layer_units, activation='relu'))
-        model.add(tf.keras.layers.Dense(dnn_layer_units, activation='relu'))
-        model.add(tf.keras.layers.Dense(output_dim, activation='softmax'))"""
-        model.compile(optimizer='RMSprop',
+        model.compile(optimizer=optimizer,
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
         model.summary()
@@ -85,8 +84,8 @@ def train_model(path, class_weights, saved_model_path=None):
 
     model.fit(train_data,
               train_label,
-              epochs=10,
-              batch_size=3,
+              epochs=30,
+              batch_size=1,
               validation_data=(test_data, test_label),
               class_weight=class_weights)
 
@@ -100,7 +99,7 @@ def train_model(path, class_weights, saved_model_path=None):
 
 
 
-fir_path = './ALL_CONV'
+fir_path = './CONV'
 folder_paths = getfile(fir_path)
 save = './models'
 modelpath = os.path.join(save,'my_model')
@@ -118,8 +117,8 @@ class_weights = {
 }
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-train_model('./test_set/conv.csv', class_weights, save)
-for folder in reversed(folder_paths):
+
+for folder in folder_paths:
     folder_path = os.path.join(fir_path, folder)
     files = getfile(folder_path)
     if not files:
@@ -129,4 +128,13 @@ for folder in reversed(folder_paths):
         if len(data:=pd.read_csv(file_path)) <1:
             continue
         print(file_path)
+        data = pd.read_csv(file_path)
+        if data['Emo'].all() != 'neutral':
+            print('none neutral')
+            train_model(file_path, class_weights, save)
+        elif data['Emo'].all() == 'neutral':
+            random_number = random.randint(0, 1)
+            if random_number == 1:
+                print('continue')
+                continue
         train_model(file_path, class_weights, save)
