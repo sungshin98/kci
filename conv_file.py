@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 
+
 def getfile(path):
     file_list = []
     for name in os.listdir(path):
@@ -27,7 +28,7 @@ def call_df(path):
 
 emo = pd.read_csv('./emotion.csv', header=None)
 emo.columns = ['Name', 'Emo']
-emo.sort_values(by = 'Name')
+emo.sort_values(by='Name')
 
 ext_time = pd.read_csv('./extract_time.csv')
 ext_time['Start'] = pd.to_datetime(ext_time['Start'], format='%Y-%m%d-%H%M-%S-%f')
@@ -53,9 +54,12 @@ for folder_path in folder_paths:
                 start_time = ext_row['Start']
                 end_time = ext_row['End']
                 df.loc[(df.index >= start_time) & (df.index <= end_time), 'Name'] = name
-                
-        merge_df = pd.merge(df, emo, on='Name', how='left')
-        merge_df['IBI'] = normibi(merge_df['IBI'])
 
+        merge_df = pd.merge(df, emo, on='Name', how='left')
+        rows_to_insert = merge_df[merge_df['Emo'] != 'neutral']
+        merge_df['IBI'] = normibi(merge_df['IBI'])
+        merge_df = pd.concat([merge_df, rows_to_insert])
         merge_df = merge_df.dropna(subset=['Name'])
         merge_df.to_csv(os.path.join(save_folder, file_path))
+
+
