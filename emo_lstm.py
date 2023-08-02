@@ -3,24 +3,14 @@ import shutil
 import pandas as pd
 import os
 import tensorflow as tf
+import numpy as np
+
 
 def getfile(path):
     file_list = []
     for name in os.listdir(path):
         file_list.append(name)
     return file_list
-
-def merge_csv_files(folder_path, output_file):
-    all_data = pd.DataFrame()
-
-    for file_name in os.listdir(folder_path):
-        if file_name.endswith('.csv'):
-            file_path = os.path.join(folder_path, file_name)
-            df = pd.read_csv(file_path)
-            all_data = pd.concat([all_data, df], ignore_index=True)
-            os.remove(file_path)
-
-    all_data.to_csv(output_file, index=False)
 
 def call_df(path):
     df = pd.read_csv(path)
@@ -33,6 +23,8 @@ def call_df(path):
         'disgust': 5,
         'fear': 6
     }
+    if 'Unnamed: 0' in df.columns:
+        df.drop(['Unnamed: 0'], axis=1, inplace=True)
     df_train = df.drop(['Name', 'Emo'], axis=1)
     data = {
         'Emo': ['neutral', 'happy', 'sad', 'angry', 'surprise', 'disgust', 'fear']
@@ -46,13 +38,22 @@ def call_df(path):
     df_encoded.drop(['EDA', 'IBI', 'TEMP'], axis=1, inplace=True)
     df_encoded.rename(columns=emotion_mapping, inplace=True)
 
-    df_train = torch.tensor(df_train.values, dtype=torch.float)
-    df_label = torch.tensor(df_encoded.values, dtype=torch.float)
+    df_train = df_train.values.astype(np.float32)
+
+    df_label = df_encoded.values.astype(np.float32)
+    df_train = np.expand_dims(df_train, axis=1)
+    print(df_label.shape)
+    print(df_train.shape)
     return df_label, df_train
 
 
 def train_model(path, class_weights, saved_model_path=None):
     df_label, df_train = call_df(path)
+    train_size = int(0.7 * len(df_train))
+    train_data = df_train[:train_size]
+    train_label = df_label[:train_size]
+    test_data = df_train[train_size:]
+    test_label = df_label[train_size:]
 
     input_dim = 3
     hidden_dim = 16
@@ -71,17 +72,17 @@ def train_model(path, class_weights, saved_model_path=None):
             tf.keras.layers.Dense(output_dim, activation='softmax')
         ])
         model.compile(optimizer='adam',
-                      loss='sparse_categorical_crossentropy',
+                      loss='categorical_crossentropy',
                       metrics=['accuracy'])
 
     else:
         loaded_model = tf.keras.models.load_model(os.path.join(saved_model_path, 'my_model'))
         model = loaded_model
 
-    model.fit(df_train, df_label, epochs=100, batch_size=1, class_weight=class_weights)
-    test_data, test_labels = call_df('./test_set')
+    model.fit(train_data, train_label, epochs=100, batch_size=5, validation_data=(test_data, test_label), class_weight=class_weights)
 
-    loss, accuracy = model.evaluate(test_data, test_labels)
+
+    loss, accuracy = model.evaluate(test_data, test_label)
 
     print(f"Test Loss: {loss}, Test Accuracy: {accuracy}")
     if saved_model_path is not None:
@@ -91,7 +92,7 @@ def train_model(path, class_weights, saved_model_path=None):
 
 
 
-fir_path = './CONV'
+fir_path = './ALL_CONV'
 folder_paths = getfile(fir_path)
 save = './models'
 class_weights = {
@@ -105,34 +106,6 @@ class_weights = {
 }
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-representatives = {
-    'neutral': None,
-    'happy': None,
-    'sad': None,
-    'angry': None,
-    'surprise': None,
-    'disgust': None,
-    'fear': None
-}
-
-for folder in folder_paths:
-    folder_path = os.path.join(fir_path, folder)
-    files = getfile(folder_path)
-    for file in files:
-        file_path = os.path.join(folder_path, file)
-        df = pd.read_csv(file_path)
-        emo_value = df.iloc[0]['Emo']
-
-        if emo_value in representatives and df.shape[0] >= 30 and representatives[emo_value] is None:
-            representatives[emo_value] = './test_set/' + file
-            shutil.move(file_path, './test_set/' + file)
-        if all(representatives.values()):
-            break
-print('comlete combine file')
-
-test_path = './test_set'
-output_path = './test_set/conv.csv'
-merge_csv_files(test_path, output_path)
 
 for folder in folder_paths:
     folder_path = os.path.join(fir_path, folder)

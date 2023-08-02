@@ -34,14 +34,13 @@ ext_time['Start'] = pd.to_datetime(ext_time['Start'], format='%Y-%m%d-%H%M-%S-%f
 ext_time['End'] = pd.to_datetime(ext_time['End'], format='%Y-%m%d-%H%M-%S-%f')
 
 path = './PRED'
-save_path = './CONV'
+save_path = './ALL_CONV'
 folder_paths = getfile(path)
 
 for folder_path in folder_paths:
     folder = os.path.join(path, folder_path)
-    save_folder = os.path.join(save_path, folder_path)
     file_paths = getfile(folder)
-    os.mkdir(save_folder)
+    os.mkdir(save_folder := os.path.join(save_path, folder_path))
     for file_path in file_paths:
         file = os.path.join(folder, file_path)
 
@@ -55,11 +54,8 @@ for folder_path in folder_paths:
                 end_time = ext_row['End']
                 df.loc[(df.index >= start_time) & (df.index <= end_time), 'Name'] = name
                 
-        merge_df = df.merge(emo, on='Name', how='left')
+        merge_df = pd.merge(df, emo, on='Name', how='left')
         merge_df['IBI'] = normibi(merge_df['IBI'])
-        for name, group_df in merge_df.groupby('Name'):
-            
-            file_name = f'{name}.csv'
-            save_file = os.path.join(save_folder, file_name)
-            group_df.to_csv(save_file, index=False)
-        print("save_complete", file_path)
+
+        merge_df = merge_df.dropna(subset=['Name'])
+        merge_df.to_csv(os.path.join(save_folder, file_path))
