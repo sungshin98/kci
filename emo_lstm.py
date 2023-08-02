@@ -56,7 +56,7 @@ def train_model(path, class_weights, saved_model_path=None):
     test_label = df_label[train_size:]
 
     input_dim = 3
-    hidden_dim = 16
+    hidden_dim = 64
     layer_dim = 7
     output_dim = 7
     learning_rate = 0.001
@@ -71,10 +71,14 @@ def train_model(path, class_weights, saved_model_path=None):
             tf.keras.layers.LSTM(hidden_dim),
             tf.keras.layers.Dense(output_dim, activation='softmax')
         ])
+        dnn_layer_units = 128
+        model.add(tf.keras.layers.Dense(dnn_layer_units, activation='relu'))
+        model.add(tf.keras.layers.Dense(dnn_layer_units, activation='relu'))
+        model.add(tf.keras.layers.Dense(output_dim, activation='softmax'))
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
-
+        print(model.summary())
     else:
         loaded_model = tf.keras.models.load_model(os.path.join(saved_model_path, 'my_model'))
         model = loaded_model
@@ -112,4 +116,5 @@ for folder in folder_paths:
     files = getfile(folder_path)
     for file in files:
         file_path = os.path.join(folder_path, file)
+        print(file)
         train_model(file_path, class_weights, save)
